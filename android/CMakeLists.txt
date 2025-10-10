@@ -11,6 +11,8 @@ add_compile_options(-DRN_SERIALIZABLE_STATE=1)
 # Define C++ library and add all sources
 add_library(${PACKAGE_NAME} SHARED
         src/main/cpp/cpp-adapter.cpp
+        ../cpp/HybridJsFpsTracking.cpp
+        ../cpp/RuntimeBridge.cpp
 )
 
 # Add Nitrogen specs :)
@@ -25,7 +27,7 @@ include_directories(
 find_library(LOG_LIB log)
 
 # Link all libraries together
-target_link_libraries(
+ target_link_libraries(
         ${PACKAGE_NAME}
         ${LOG_LIB}
         android                                   # <-- Android core

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "android:release": "react-native run-android --mode release",
     "ios": "react-native run-ios --simulator='iPhone 16'",
     "lint": "eslint .",
     "start": "react-native start --reset-cache",

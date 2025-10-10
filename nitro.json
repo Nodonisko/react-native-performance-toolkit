@@ -1,24 +1,21 @@
 {
   "$schema": "https://nitro.margelo.com/nitro.schema.json",
-  "cxxNamespace": [
-    "performancetoolkit"
-  ],
+  "cxxNamespace": ["performancetoolkit"],
   "ios": {
     "iosModuleName": "PerformanceToolkit"
   },
   "android": {
-    "androidNamespace": [
-      "performancetoolkit"
-    ],
+    "androidNamespace": ["performancetoolkit"],
     "androidCxxLibName": "PerformanceToolkit"
   },
   "autolinking": {
     "PerformanceToolkit": {
       "swift": "HybridPerformanceToolkit",
       "kotlin": "HybridPerformanceToolkit"
+    },
+    "JsFpsTracking": {
+      "cpp": "HybridJsFpsTracking"
     }
   },
-  "ignorePaths": [
-    "**/node_modules"
-  ]
+  "ignorePaths": ["**/node_modules"]
 }
