@@ -221,9 +221,7 @@ class HybridPerformanceToolkit : HybridPerformanceToolkitSpec() {
             }
           }
         }
-        if (pssValue != null) {
-          return pssValue
-        }
+        pssValue?.let { return it }
       }
       
       // Fallback: Debug.MemoryInfo (most reliable but ~200x more expensive)

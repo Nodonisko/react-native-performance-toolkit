@@ -1,6 +1,6 @@
 {
   "name": "react-native-performance-toolkit",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1-alpha.3",
   "description": "react-native-performance-toolkit is a react native package built with Nitro",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -12,6 +12,7 @@
     "clean": "git clean -dfX",
     "release": "semantic-release",
     "build": "bun run typecheck && bob build",
+    "prepublishOnly": "bun run codegen && bun run build",
     "codegen": "nitrogen --logLevel=\"debug\" && bun run build && node post-script.js"
   },
   "keywords": [
@@ -43,11 +44,11 @@
   "workspaces": [
     "example"
   ],
-  "repository": "https://github.com/danielsuchý/react-native-performance-toolkit.git",
+  "repository": "https://github.com/nodonisko/react-native-performance-toolkit.git",
   "author": "Daniel Suchý",
   "license": "MIT",
-  "bugs": "https://github.com/danielsuchý/react-native-performance-toolkit/issues",
-  "homepage": "https://github.com/danielsuchý/react-native-performance-toolkit#readme",
+  "bugs": "https://github.com/nodonisko/react-native-performance-toolkit/issues",
+  "homepage": "https://github.com/nodonisko/react-native-performance-toolkit#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
