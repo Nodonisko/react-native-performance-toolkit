@@ -7,10 +7,16 @@
 
 package com.performancetoolkit.fps
 
+import android.content.Context
+import android.os.Build
+import android.util.Log
+import android.view.Display
+import android.view.WindowManager
 import android.view.Choreographer
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.UiThreadUtil
 import kotlin.math.max
+import kotlin.math.min
 
 internal class FpsFrameTracker(private val reactContext: ReactContext) :
   Choreographer.FrameCallback {
@@ -22,6 +28,7 @@ internal class FpsFrameTracker(private val reactContext: ReactContext) :
   private var expectedFramesPrev = 0
   private var stutters = 0
   private var targetFps = DEFAULT_FPS
+  private val maxDeviceFps: Double by lazy { getDeviceMaxFps() }
 
   override fun doFrame(frameTimeNanos: Long) {
     if (firstFrameTime == -1L) {
@@ -45,16 +52,26 @@ internal class FpsFrameTracker(private val reactContext: ReactContext) :
 
   fun start(targetFps: Double = this.targetFps) {
     this.targetFps = targetFps
-    UiThreadUtil.runOnUiThread {
-      choreographer = Choreographer.getInstance()
-      choreographer?.postFrameCallback(this)
+    try {
+      UiThreadUtil.runOnUiThread {
+        choreographer = Choreographer.getInstance()
+        choreographer?.postFrameCallback(this)
+        Log.d(TAG, "FpsFrameTracker started with targetFps: $targetFps")
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Error starting FpsFrameTracker", e)
     }
   }
 
   fun stop() {
-    UiThreadUtil.runOnUiThread {
-      choreographer = Choreographer.getInstance()
-      choreographer?.removeFrameCallback(this)
+    try {
+      UiThreadUtil.runOnUiThread {
+        choreographer = Choreographer.getInstance()
+        choreographer?.removeFrameCallback(this)
+        Log.d(TAG, "FpsFrameTracker stopped")
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Error stopping FpsFrameTracker", e)
     }
   }
 
@@ -67,10 +84,18 @@ internal class FpsFrameTracker(private val reactContext: ReactContext) :
   }
 
   val fps: Double
-    get() =
-      if (lastFrameTime == firstFrameTime || frameCount <= 0) {
-        0.0
-      } else frameCount.toDouble() * ONE_BILLION / max(lastFrameTime - firstFrameTime, 1L)
+    get() {
+      if (frameCount <= 0 || lastFrameTime <= firstFrameTime) {
+        return 0.0
+      }
+      val timeDiff = lastFrameTime - firstFrameTime
+      if (timeDiff <= 0) {
+        return 0.0
+      }
+      val rawFps = frameCount.toDouble() * ONE_BILLION / timeDiff
+      val roundedFps = kotlin.math.round(rawFps)
+      return min(roundedFps, maxDeviceFps)
+    }
 
   val frameCount: Int
     get() = frameCallbackCount - 1
@@ -90,7 +115,33 @@ internal class FpsFrameTracker(private val reactContext: ReactContext) :
         0
       } else ((lastFrameTime.toDouble() - firstFrameTime) / ONE_MILLION).toInt()
 
+  private fun getDeviceMaxFps(): Double {
+    return try {
+      // Try to get display from current activity first
+      val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        reactContext.currentActivity?.display
+      } else {
+        null
+      }
+      
+      // Fall back to WindowManager's default display
+      val finalDisplay = display ?: run {
+        val windowManager = reactContext.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+        @Suppress("DEPRECATION")
+        windowManager?.defaultDisplay
+      }
+      
+      val refreshRate = finalDisplay?.refreshRate?.toDouble() ?: DEFAULT_FPS
+      Log.d(TAG, "Device max refresh rate: $refreshRate FPS")
+      refreshRate
+    } catch (e: Exception) {
+      Log.e(TAG, "Error getting device refresh rate, defaulting to $DEFAULT_FPS", e)
+      DEFAULT_FPS
+    }
+  }
+
   companion object {
+    private const val TAG = "FpsFrameTracker"
     private const val DEFAULT_FPS = 60.0
     private const val ONE_BILLION = 1e9
     private const val ONE_MILLION = 1e6

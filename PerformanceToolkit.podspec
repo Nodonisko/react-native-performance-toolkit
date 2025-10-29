@@ -17,9 +17,9 @@ Pod::Spec.new do |s|
     # Implementation (Swift)
     "ios/**/*.{swift}",
     # Autolinking/Registration (Objective-C++)
-    "ios/**/*.{m,mm}",
+    "ios/**/*.{h,m,mm}",
     # Implementation (C++ objects)
-    "cpp/**/*.{hpp,cpp}",
+    "cpp/**/*.{hpp,cpp,h}",
   ]
 
   load 'nitrogen/generated/ios/PerformanceToolkit+autolinking.rb'

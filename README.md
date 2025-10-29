@@ -1,10 +1,6 @@
 # react-native-performance-toolkit
 
-react-native-performance-toolkit is a react native package built with Nitro
-
-[![Version](https://img.shields.io/npm/v/react-native-performance-toolkit.svg)](https://www.npmjs.com/package/react-native-performance-toolkit)
-[![Downloads](https://img.shields.io/npm/dm/react-native-performance-toolkit.svg)](https://www.npmjs.com/package/react-native-performance-toolkit)
-[![License](https://img.shields.io/npm/l/react-native-performance-toolkit.svg)](https://github.com/patrickkabwe/react-native-performance-toolkit/LICENSE)
+Low overhead monitoring of important performance metrics for React Native apps like JS FPS, UI FPS, CPU usage, and memory usage.
 
 ## Requirements
 

@@ -1,17 +1,19 @@
 #pragma once
 
-#include <fbjni/fbjni.h>
 #include <jsi/jsi.h>
-#include <react/jni/JRuntimeExecutor.h>
+#include <ReactCommon/RuntimeExecutor.h>
 #include <memory>
-#include <mutex>
 
 namespace margelo::nitro::performancetoolkit {
 
 using namespace facebook;
 using namespace facebook::react;
 
-// Singleton to hold the RuntimeExecutor
+// Platform-agnostic singleton to hold the RuntimeExecutor and device capabilities
+// Works on both iOS (via CallInvoker) and Android (via RuntimeExecutor)
+// 
+// On Android: Initialized by NativePerformanceToolkitModule (TurboModule)
+// On iOS: Initialized by PerformanceToolkitModule.mm (TurboModule)
 class RuntimeBridgeState {
 public:
   static RuntimeBridgeState& get();
@@ -19,30 +21,15 @@ public:
   void setRuntimeExecutor(RuntimeExecutor executor);
   const RuntimeExecutor& getRuntimeExecutor();
 
+  // Device capabilities
+  void setDeviceRefreshRate(double fps);
+  double getDeviceRefreshRate() const;
+  double getFrameIntervalMs() const;
+
 private:
   RuntimeBridgeState() = default;
-  std::mutex _mutex;
   std::unique_ptr<RuntimeExecutor> _runtimeExecutor;
-};
-
-// JNI HybridClass to bridge Java/Kotlin to C++
-struct RuntimeBridge : public jni::HybridClass<RuntimeBridge> {
-  static constexpr auto kJavaDescriptor = "Lcom/performancetoolkit/runtime/RuntimeBridge;";
-
-  static void registerNatives();
-
-  static jni::local_ref<jhybriddata> initHybrid(
-      jni::alias_ref<jhybridobject> jThis,
-      jni::alias_ref<JRuntimeExecutor::javaobject> runtimeExecutorHolder
-  );
-
-  explicit RuntimeBridge(
-      jni::alias_ref<jhybridobject> jThis,
-      jni::alias_ref<JRuntimeExecutor::javaobject> runtimeExecutorHolder
-  );
-
-private:
-  RuntimeExecutor _runtimeExecutor;
+  double _deviceRefreshRate = 60.0; // Default to 60 FPS
 };
 
 } // namespace margelo::nitro::performancetoolkit

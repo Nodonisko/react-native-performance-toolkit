@@ -5,7 +5,6 @@
 
 namespace margelo::nitro::performancetoolkit {
 
-// Forward declaration
 class JsFpsTracker;
 
 class HybridJsFpsTracking : public HybridJsFpsTrackingSpec {
@@ -13,11 +12,11 @@ public:
   HybridJsFpsTracking();
   ~HybridJsFpsTracking() override;
 
-  void startTracking(const std::function<void(double)>& onUpdate) override;
-  void stopTracking() override;
+  std::shared_ptr<ArrayBuffer> getJsFpsBuffer() override;
 
 private:
   std::shared_ptr<JsFpsTracker> _tracker;
+  std::shared_ptr<ArrayBuffer> _fpsBuffer;
 };
 
 } // namespace margelo::nitro::performancetoolkit

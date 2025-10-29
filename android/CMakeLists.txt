@@ -11,6 +11,7 @@ add_compile_options(-DRN_SERIALIZABLE_STATE=1)
 # Define C++ library and add all sources
 add_library(${PACKAGE_NAME} SHARED
         src/main/cpp/cpp-adapter.cpp
+        src/main/cpp/NativePerformanceToolkitModule.cpp
         ../cpp/HybridJsFpsTracking.cpp
         ../cpp/RuntimeBridge.cpp
 )

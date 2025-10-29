@@ -1,26 +1,40 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import {
-  PerformanceToolkit,
   JsFpsTracking,
-  PerformanceStats,
+  FpsCounterView,
+  useFpsUi,
+  useCpuUsage,
+  useMemoryUsage,
 } from 'react-native-performance-toolkit';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ReanimatedOnlyFpsCounter } from './src/ReanimatedOnlyFpsCounter';
 
 function formatValue(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(1) : '0.0';
+  return Number.isFinite(value) ? value.toFixed(0) : '0';
 }
 
 const sleepAsync = (ms: number) =>
-  new Promise(resolve => setTimeout(resolve, ms));
+  new Promise<void>(resolve => setTimeout(() => resolve(), ms));
+
+const UIFpsCounter = () => {
+  const fps = useFpsUi();
+  return <Text style={styles.stat}>UI FPS: {formatValue(fps)}</Text>;
+};
+
+const CpuUsageCounter = () => {
+  const cpuUsage = useCpuUsage();
+  return <Text style={styles.stat}>CPU (%): {formatValue(cpuUsage)}</Text>;
+};
+
+const MemoryUsageCounter = () => {
+  const memoryUsage = useMemoryUsage();
+  return <Text style={styles.stat}>RAM (MB): {formatValue(memoryUsage)}</Text>;
+};
 
 function App(): React.JSX.Element {
-  const [stats, setStats] = useState<PerformanceStats | null>(null);
-  const [jsFps, setJsFps] = useState<number>(0);
-  const [isTracking, setIsTracking] = useState(false);
-
-  const blockJSThread = () => {
-    const blockTime = 100;
-    console.log(`Blocking JS thread for ${blockTime} miliseconds...`);
+  const blockJSThread = (blockTime: number = 500) => {
+    console.log(`Blocking JS thread for ${blockTime} milliseconds...`);
     const start = Date.now();
     // Heavy synchronous computation to block the JS thread
     let result = 0;
@@ -34,56 +48,26 @@ function App(): React.JSX.Element {
   };
 
   const blockTo30FpsFor5Seconds = async () => {
-    console.log('Blocking JS thread to 10 FPS for 5 seconds...');
-    for (let i = 0; i < 100; i++) {
-      if (i % 2 === 0 || i % 3 === 0 || i % 5 === 0 || i % 7 === 0) {
+    console.log('Blocking JS thread to 30 FPS for 10 seconds...');
+    for (let i = 0; i < 20; i++) {
+      if (i % 2 === 0) {
         blockJSThread();
       } else {
-        await sleepAsync(100);
+        await sleepAsync(500);
       }
     }
   };
 
-  useEffect(() => {
-    const handleUpdate = (next: PerformanceStats) => {
-      console.log('[PerformanceStats]', JSON.stringify(next));
-      setStats(next);
-    };
-
-    // Start PerformanceToolkit first to initialize RuntimeBridge
-    PerformanceToolkit.startTracking(handleUpdate, {
-      withCpu: true,
-      updateIntervalMs: 500,
-    });
-
-    // Small delay to ensure RuntimeBridge is initialized
-    setTimeout(() => {
-      // Start C++ JS FPS tracking
-      JsFpsTracking.startTracking(fps => {
-        console.log('[JsFps C++]', fps);
-        setJsFps(fps);
-      });
-    }, 100);
-
-    setIsTracking(true);
-
-    // Cleanup on unmount
-    return () => {
-      PerformanceToolkit.stopTracking();
-      JsFpsTracking.stopTracking();
-      setIsTracking(false);
-    };
-  }, []);
-
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <Text style={styles.title}>Performance Toolkit</Text>
-      <Text style={styles.status}>
-        Status: {isTracking ? 'Tracking' : 'Stopped'}
-      </Text>
+      <Text style={styles.subtitle}>Buffer-based API</Text>
 
-      <TouchableOpacity style={styles.button} onPress={blockJSThread}>
-        <Text style={styles.buttonText}>Block JS Thread (2s)</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => blockJSThread(5000)}
+      >
+        <Text style={styles.buttonText}>Block JS Thread (5s)</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={blockTo30FpsFor5Seconds}>
         <Text style={styles.buttonText}>
@@ -91,21 +75,23 @@ function App(): React.JSX.Element {
         </Text>
       </TouchableOpacity>
 
-      {stats ? (
-        <View style={styles.statsContainer}>
-          <Text style={styles.stat}>UI FPS: {formatValue(stats.uiFps)}</Text>
-          <Text style={styles.stat}>JS FPS: {formatValue(jsFps)}</Text>
-          <Text style={styles.stat}>Frames Dropped: {stats.framesDropped}</Text>
-          <Text style={styles.stat}>Stutters: {stats.stutters}</Text>
-          <Text style={styles.stat}>
-            RAM (MB): {formatValue(stats.usedRam)}
-          </Text>
-          <Text style={styles.stat}>CPU (%): {formatValue(stats.usedCpu)}</Text>
-        </View>
-      ) : (
-        <Text style={styles.placeholder}>Waiting for stats…</Text>
-      )}
-    </View>
+      <View style={styles.statsContainer}>
+        <UIFpsCounter />
+        <CpuUsageCounter />
+        <MemoryUsageCounter />
+      </View>
+
+      <View style={styles.nativeViewContainer}>
+        <Text style={styles.nativeViewLabel}>Native FpsCounterView:</Text>
+        <FpsCounterView
+          valueBuffer={JsFpsTracking.getJsFpsBuffer()}
+          updateIntervalMs={100}
+          label="JS FPS"
+          style={styles.fpsCounterView}
+        />
+      </View>
+      <ReanimatedOnlyFpsCounter />
+    </GestureHandlerRootView>
   );
 }
 
@@ -121,10 +107,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     color: '#f0f6fc',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  status: {
-    fontSize: 16,
+  subtitle: {
+    fontSize: 14,
     color: '#8b949e',
     marginBottom: 16,
   },
@@ -145,15 +131,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#161b22',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 16,
   },
   stat: {
     fontSize: 16,
     color: '#f0f6fc',
     marginBottom: 4,
   },
-  placeholder: {
-    fontSize: 16,
+  nativeViewContainer: {
+    alignItems: 'center',
+  },
+  nativeViewLabel: {
+    fontSize: 14,
     color: '#8b949e',
+    marginBottom: 8,
+  },
+  fpsCounterView: {
+    width: 100,
+    height: 100,
+    borderWidth: 1,
+    borderColor: '#f85149',
+    borderRadius: 8,
   },
 });
 
