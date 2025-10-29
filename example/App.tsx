@@ -1,8 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import {
-  JsFpsTracking,
-  FpsCounterView,
   useFpsUi,
   useCpuUsage,
   useMemoryUsage,
@@ -81,7 +79,7 @@ function App(): React.JSX.Element {
         <MemoryUsageCounter />
       </View>
 
-      <View style={styles.nativeViewContainer}>
+      {/* <View style={styles.nativeViewContainer}>
         <Text style={styles.nativeViewLabel}>Native FpsCounterView:</Text>
         <FpsCounterView
           valueBuffer={JsFpsTracking.getJsFpsBuffer()}
@@ -89,7 +87,7 @@ function App(): React.JSX.Element {
           label="JS FPS"
           style={styles.fpsCounterView}
         />
-      </View>
+      </View> */}
       <ReanimatedOnlyFpsCounter />
     </GestureHandlerRootView>
   );

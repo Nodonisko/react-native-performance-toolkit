@@ -1,12 +1,8 @@
-import { getHostComponent, NitroModules } from 'react-native-nitro-modules'
+import { NitroModules } from 'react-native-nitro-modules'
 import './specs/TurboPerformanceToolkit'
 import type { PerformanceToolkit as PerformanceToolkitSpec } from './specs/performance-toolkit.nitro'
 import type { JsFpsTracking as JsFpsTrackingSpec } from './specs/js-fps-tracking.nitro'
-import type {
-  FpsCounterMethods,
-  FpsCounterProps,
-} from './specs/FpsCounterView.nitro'
-import FpsCounterViewConfig from '../nitrogen/generated/shared/json/FpsCounterViewConfig.json'
+
 import { useEffect, useState } from 'react'
 
 export const PerformanceToolkit =
@@ -24,11 +20,6 @@ export const getMemoryUsageBuffer = () =>
 
 export const BoxedJsFpsTracking = NitroModules.box(JsFpsTracking)
 export const BoxedPerformanceToolkit = NitroModules.box(PerformanceToolkit)
-
-export const FpsCounterView = getHostComponent<
-  FpsCounterProps,
-  FpsCounterMethods
->('FpsCounterView', () => FpsCounterViewConfig)
 
 const prepareOnChange = (
   bufferGetter: () => ArrayBuffer,

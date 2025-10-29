@@ -15,10 +15,6 @@
     },
     "JsFpsTracking": {
       "cpp": "HybridJsFpsTracking"
-    },
-    "FpsCounterView": {
-      "swift": "HybridFpsCounterView",
-      "kotlin": "HybridFpsCounterView"
     }
   },
   "ignorePaths": ["**/node_modules"]
