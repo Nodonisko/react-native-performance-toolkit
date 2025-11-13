@@ -226,10 +226,6 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
         lastTotalCpuTime = totalCpuTime
         lastCpuValue = cpuPercentage
         
-        #if DEBUG
-        print("[PerformanceToolkit] CPU: \(cpuPercentage)%")
-        #endif
-        
         return cpuPercentage
     }
     
