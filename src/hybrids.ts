@@ -1,5 +1,4 @@
 import { NitroModules } from 'react-native-nitro-modules'
-import './specs/TurboPerformanceToolkit'
 import type { JsFpsTracking as JsFpsTrackingSpec } from './specs/js-fps-tracking.nitro'
 import type { PerformanceToolkit as PerformanceToolkitSpec } from './specs/performance-toolkit.nitro'
 

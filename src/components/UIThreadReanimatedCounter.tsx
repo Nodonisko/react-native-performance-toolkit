@@ -1,16 +1,12 @@
-import React, { useCallback, useEffect } from 'react'
+import React from 'react'
 import { StyleSheet, Text, TextInput } from 'react-native'
-import { BoxedJsFpsTracking, BoxedPerformanceToolkit } from '../index'
 import Animated, {
   interpolateColor,
   setNativeProps,
   useAnimatedReaction,
   useAnimatedRef,
   useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
 } from 'react-native-reanimated'
-import { scheduleOnUI } from 'react-native-worklets'
 import { useCounterSharedValue } from '../hooks/uiThreadHooks'
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput)
