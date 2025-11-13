@@ -34,6 +34,7 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     private var uiFpsBuffer: ArrayBuffer?
     private var frameCount: Int = 0
     private var lastFrameTime: CFTimeInterval = 0
+    private var isUiFpsTrackingStarting = false
     
     // CPU tracking
     private var cpuTimer: Timer?
@@ -41,17 +42,20 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     private var lastCpuCollectionTime: CFTimeInterval = 0
     private var lastCpuValue: Double = 0.0
     private var lastTotalCpuTime: Double = 0.0
+    private var isCpuTrackingStarting = false
     private static let CPU_COLLECTION_INTERVAL: CFTimeInterval = 0.5
     
     // Memory tracking
     private var memoryTimer: Timer?
     private var memoryBuffer: ArrayBuffer?
+    private var isMemoryTrackingStarting = false
     
     private lazy var maxDeviceFps: Double = {
         let fps = Double(UIScreen.main.maximumFramesPerSecond)
+        #if DEBUG
         print("[PerformanceToolkit] Device max refresh rate: \(fps) FPS")
+        #endif
         return fps
-
     }()
     
     override init() {
@@ -59,10 +63,21 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     }
     
     deinit {
-        displayLink?.invalidate()
-        uiFpsTimer?.invalidate()
-        cpuTimer?.invalidate()
-        memoryTimer?.invalidate()
+        // Capture timers to invalidate them on the correct thread
+        let displayLinkCopy = displayLink
+        let displayLinkProxyCopy = displayLinkProxy
+        let uiFpsTimerCopy = uiFpsTimer
+        let cpuTimerCopy = cpuTimer
+        let memoryTimerCopy = memoryTimer
+        
+        DispatchQueue.main.async {
+            displayLinkCopy?.invalidate()
+            uiFpsTimerCopy?.invalidate()
+            cpuTimerCopy?.invalidate()
+            memoryTimerCopy?.invalidate()
+            // Proxy will be deallocated when no longer referenced
+            _ = displayLinkProxyCopy
+        }
     }
     
     // MARK: - UI FPS Buffer
@@ -73,7 +88,8 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
             uiFpsBuffer!.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = 0 }
         }
         
-        if displayLink == nil {
+        if displayLink == nil && !isUiFpsTrackingStarting {
+            isUiFpsTrackingStarting = true
             startUiFpsTracking()
         }
         
@@ -81,17 +97,32 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     }
     
     private func startUiFpsTracking() {
-        // Use proxy to avoid retain cycle
-        let proxy = DisplayLinkProxy(target: self)
-        displayLinkProxy = proxy
-        displayLink = CADisplayLink(target: proxy, selector: #selector(DisplayLinkProxy.handleDisplayLink(_:)))
-        displayLink?.add(to: .main, forMode: .common)
-        
-        frameCount = 0
-        lastFrameTime = 0
-        
-        uiFpsTimer = Timer.scheduledTimer(withTimeInterval: Self.UI_FPS_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
-            self?.updateUiFpsBuffer()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { 
+                self?.isUiFpsTrackingStarting = false
+                return 
+            }
+            
+            // Double-check on main thread to prevent race condition
+            guard self.displayLink == nil else {
+                self.isUiFpsTrackingStarting = false
+                return
+            }
+            
+            // Use proxy to avoid retain cycle
+            let proxy = DisplayLinkProxy(target: self)
+            self.displayLinkProxy = proxy
+            self.displayLink = CADisplayLink(target: proxy, selector: #selector(DisplayLinkProxy.handleDisplayLink(_:)))
+            self.displayLink?.add(to: .main, forMode: .common)
+            
+            self.frameCount = 0
+            self.lastFrameTime = 0
+            
+            self.uiFpsTimer = Timer.scheduledTimer(withTimeInterval: Self.UI_FPS_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
+                self?.updateUiFpsBuffer()
+            }
+            
+            self.isUiFpsTrackingStarting = false
         }
     }
     
@@ -120,7 +151,8 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
             cpuBuffer!.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = 0 }
         }
         
-        if cpuTimer == nil {
+        if cpuTimer == nil && !isCpuTrackingStarting {
+            isCpuTrackingStarting = true
             startCpuTracking()
         }
         
@@ -128,8 +160,23 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     }
     
     private func startCpuTracking() {
-        cpuTimer = Timer.scheduledTimer(withTimeInterval: Self.CPU_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
-            self?.updateCpuBuffer()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                self?.isCpuTrackingStarting = false
+                return
+            }
+            
+            // Double-check on main thread to prevent race condition
+            guard self.cpuTimer == nil else {
+                self.isCpuTrackingStarting = false
+                return
+            }
+            
+            self.cpuTimer = Timer.scheduledTimer(withTimeInterval: Self.CPU_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
+                self?.updateCpuBuffer()
+            }
+            
+            self.isCpuTrackingStarting = false
         }
     }
     
@@ -149,7 +196,9 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
         let rusageResult = getrusage(RUSAGE_SELF, &usage)
         
         guard rusageResult == 0 else {
+            #if DEBUG
             print("[PerformanceToolkit] CPU: getrusage failed, returning cached value: \(lastCpuValue)")
+            #endif
             return lastCpuValue
         }
         
@@ -177,6 +226,10 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
         lastTotalCpuTime = totalCpuTime
         lastCpuValue = cpuPercentage
         
+        #if DEBUG
+        print("[PerformanceToolkit] CPU: \(cpuPercentage)%")
+        #endif
+        
         return cpuPercentage
     }
     
@@ -188,7 +241,8 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
             memoryBuffer!.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = 0 }
         }
         
-        if memoryTimer == nil {
+        if memoryTimer == nil && !isMemoryTrackingStarting {
+            isMemoryTrackingStarting = true
             startMemoryTracking()
         }
         
@@ -196,8 +250,23 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     }
     
     private func startMemoryTracking() {
-        memoryTimer = Timer.scheduledTimer(withTimeInterval: Self.MEMORY_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
-            self?.updateMemoryBuffer()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                self?.isMemoryTrackingStarting = false
+                return
+            }
+            
+            // Double-check on main thread to prevent race condition
+            guard self.memoryTimer == nil else {
+                self.isMemoryTrackingStarting = false
+                return
+            }
+            
+            self.memoryTimer = Timer.scheduledTimer(withTimeInterval: Self.MEMORY_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
+                self?.updateMemoryBuffer()
+            }
+            
+            self.isMemoryTrackingStarting = false
         }
     }
     

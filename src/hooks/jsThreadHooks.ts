@@ -1,25 +1,12 @@
-import { NitroModules } from 'react-native-nitro-modules'
-import './specs/TurboPerformanceToolkit'
-import type { PerformanceToolkit as PerformanceToolkitSpec } from './specs/performance-toolkit.nitro'
-import type { JsFpsTracking as JsFpsTrackingSpec } from './specs/js-fps-tracking.nitro'
-
+import { JsFpsTracking } from '../hybrids'
+import { PerformanceToolkit } from '../hybrids'
 import { useEffect, useState } from 'react'
 
-export const PerformanceToolkit =
-  NitroModules.createHybridObject<PerformanceToolkitSpec>('PerformanceToolkit')
+const getJsFpsBuffer = () => JsFpsTracking.getJsFpsBuffer()
 
-export const JsFpsTracking =
-  NitroModules.createHybridObject<JsFpsTrackingSpec>('JsFpsTracking')
-
-export const getJsFpsBuffer = () => JsFpsTracking.getJsFpsBuffer()
-
-export const getUiFpsBuffer = () => PerformanceToolkit.getUiFpsBuffer()
-export const getCpuUsageBuffer = () => PerformanceToolkit.getCpuUsageBuffer()
-export const getMemoryUsageBuffer = () =>
-  PerformanceToolkit.getMemoryUsageBuffer()
-
-export const BoxedJsFpsTracking = NitroModules.box(JsFpsTracking)
-export const BoxedPerformanceToolkit = NitroModules.box(PerformanceToolkit)
+const getUiFpsBuffer = () => PerformanceToolkit.getUiFpsBuffer()
+const getCpuUsageBuffer = () => PerformanceToolkit.getCpuUsageBuffer()
+const getMemoryUsageBuffer = () => PerformanceToolkit.getMemoryUsageBuffer()
 
 const prepareOnChange = (
   bufferGetter: () => ArrayBuffer,
@@ -28,6 +15,10 @@ const prepareOnChange = (
   return (callback: (fps: number) => void) => {
     const intervalId = setInterval(() => {
       const buffer = bufferGetter()
+      if (!buffer) {
+        console.error(`Failed to get buffer.`)
+        return
+      }
       const view = new DataView(buffer)
       callback(view.getInt32(0, true)) // true = littleEndian
     }, intervalMs)

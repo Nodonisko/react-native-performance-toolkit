@@ -4,9 +4,15 @@ import {
   useFpsUi,
   useCpuUsage,
   useMemoryUsage,
+  useFpsJs,
 } from 'react-native-performance-toolkit';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ReanimatedOnlyFpsCounter } from './src/ReanimatedOnlyFpsCounter';
+import {
+  JSFpsCounter,
+  UIFpsCounter,
+  CpuUsageCounter,
+  MemoryUsageCounter,
+} from 'react-native-performance-toolkit';
 
 function formatValue(value: number): string {
   return Number.isFinite(value) ? value.toFixed(0) : '0';
@@ -15,17 +21,22 @@ function formatValue(value: number): string {
 const sleepAsync = (ms: number) =>
   new Promise<void>(resolve => setTimeout(() => resolve(), ms));
 
-const UIFpsCounter = () => {
+const JSThreadReanimatedCounter = () => {
+  const fps = useFpsJs();
+  return <Text style={styles.stat}>JS FPS: {formatValue(fps)}</Text>;
+};
+
+const UIFpsCounterJSThread = () => {
   const fps = useFpsUi();
   return <Text style={styles.stat}>UI FPS: {formatValue(fps)}</Text>;
 };
 
-const CpuUsageCounter = () => {
+const CpuUsageCounterJSThread = () => {
   const cpuUsage = useCpuUsage();
   return <Text style={styles.stat}>CPU (%): {formatValue(cpuUsage)}</Text>;
 };
 
-const MemoryUsageCounter = () => {
+const MemoryUsageCounterJSThread = () => {
   const memoryUsage = useMemoryUsage();
   return <Text style={styles.stat}>RAM (MB): {formatValue(memoryUsage)}</Text>;
 };
@@ -69,14 +80,38 @@ function App(): React.JSX.Element {
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={blockTo30FpsFor5Seconds}>
         <Text style={styles.buttonText}>
-          Block JS Thread to 30 FPS for 5 seconds
+          Block JS Thread to 30 FPS for 10seconds
         </Text>
       </TouchableOpacity>
 
+      <View>
+        <Text style={styles.subtitle}>JS Thread updated values</Text>
+      </View>
       <View style={styles.statsContainer}>
-        <UIFpsCounter />
-        <CpuUsageCounter />
-        <MemoryUsageCounter />
+        <JSThreadReanimatedCounter />
+        <UIFpsCounterJSThread />
+        <CpuUsageCounterJSThread />
+        <MemoryUsageCounterJSThread />
+      </View>
+
+      <View>
+        <Text style={styles.subtitle}>UI Thread updated values</Text>
+      </View>
+      <View style={styles.componentsStackContainer}>
+        <View style={{ height: 100, width: 100 }}>
+          <JSFpsCounter />
+        </View>
+        <View style={{ height: 100, width: 100 }}>
+          <UIFpsCounter />
+        </View>
+      </View>
+      <View style={styles.componentsStackContainer}>
+        <View style={{ height: 100, width: 100 }}>
+          <CpuUsageCounter />
+        </View>
+        <View style={{ height: 100, width: 100 }}>
+          <MemoryUsageCounter />
+        </View>
       </View>
 
       {/* <View style={styles.nativeViewContainer}>
@@ -88,7 +123,6 @@ function App(): React.JSX.Element {
           style={styles.fpsCounterView}
         />
       </View> */}
-      <ReanimatedOnlyFpsCounter />
     </GestureHandlerRootView>
   );
 }
@@ -129,6 +163,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#161b22',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 16,
+  },
+  componentsStackContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
     marginBottom: 16,
   },
   stat: {
