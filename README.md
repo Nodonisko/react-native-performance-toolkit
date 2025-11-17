@@ -1,4 +1,4 @@
-# react-native-performance-toolkit
+# React Native Performance Toolkit
 
 Low overhead monitoring of important performance metrics for React Native apps like JS FPS, UI FPS, CPU usage, and memory usage.
 
@@ -11,12 +11,11 @@ bun add react-native-performance-toolkit react-native-nitro-modules
 ## Requirements
 
 - React Native v0.76.0 or higher
-- Node 18.0.0 or higher
 - Reanimated v4 or higher
 
 ## Usage
 
-#### Very simple usage - get value once
+### Very simple usage - get value once
 
 ```tsx
 import {
@@ -43,7 +42,7 @@ console.log('Max Refresh Rate:', maxRefreshRate, 'Hz')
 console.log('Current Refresh Rate:', currentRefreshRate, 'Hz')
 ```
 
-#### Subscribe to changes
+### Subscribe to changes
 
 ```tsx
 import { onFpsJsChange } from 'react-native-performance-toolkit'
@@ -56,7 +55,7 @@ const unsubscribe = onFpsJsChange((fps) => {
 unsubscribe()
 ```
 
-#### React Hooks - JS Thread only
+### React Hooks - JS Thread only
 
 Please be aware that this hook will not update if your JS thread is blocked (0 FPS) because updates are happening only on that very same thread.
 
@@ -69,7 +68,7 @@ const SomeComponent = () => {
 }
 ```
 
-#### Reanimated Hooks - UI Thread
+### Reanimated Hooks - UI Thread
 
 To avoid the issue with not showing 0 FPS, it's recommended to use Reanimated based hooks or pre-made components. This will ensure the value is updated even if the JS thread is blocked.
 
@@ -99,7 +98,7 @@ const SomeComponent = () => {
 }
 ```
 
-#### Pre-made Reanimated components - UI Thread
+### Pre-made Reanimated components - UI Thread
 
 For better DX, the library provides pre-made Reanimated components that run solely on the UI thread. You can use either the convenience wrappers or the flexible base component:
 
@@ -131,7 +130,7 @@ const SomeComponent = () => {
 }
 ```
 
-#### Direct buffer access (advanced usage, experimental)
+### Direct buffer access (advanced usage, experimental)
 
 Some advanced usage might require direct buffer access. For example, you might want to use this library in a custom native component or you might want to use it in a worklet thread. This is experimental and might be changed in the future.
 
@@ -235,13 +234,13 @@ const updateFps = useCallback(() => {
 
 ## Architecture
 
-#### Low overhead tracking
+### Low overhead tracking
 
 On Android, the library is reading values from virtual files like `/proc/stat` for CPU usage and `/proc/smaps_rollup` for memory usage. This is very low overhead and doesn't require any additional permissions.
 
 On iOS, the library is reading values from `task_vm_info`/`rusage` direct kernel call. This is also extremely low overhead.
 
-#### Device Refresh Rate
+### Device Refresh Rate
 
 The library provides two methods for getting refresh rate information:
 
@@ -253,7 +252,7 @@ The library provides two methods for getting refresh rate information:
   - Android: Uses `Display.getRefreshRate()` - useful for devices with adaptive refresh rate (e.g., 60/90/120Hz switching)
   - iOS: Uses `CADisplayLink.preferredFramesPerSecond` - useful for ProMotion displays that dynamically adjust
 
-#### JS FPS Tracking
+### JS FPS Tracking
 
 You can build JS FPS tracking in plain JS using setTimeout or requestAnimationFrame. But this library is running similar logic in C++ on the same thread as JS, with lower overhead and a few other benefits. For example, we can easily access the value from other threads.
 
