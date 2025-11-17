@@ -5,6 +5,8 @@ import {
   useCpuUsage,
   useMemoryUsage,
   useFpsJs,
+  getDeviceMaxRefreshRate,
+  getDeviceCurrentRefreshRate,
 } from 'react-native-performance-toolkit';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -83,6 +85,15 @@ function App(): React.JSX.Element {
           Block JS Thread to 30 FPS for 10seconds
         </Text>
       </TouchableOpacity>
+
+      <View>
+        <Text style={styles.subtitle}>
+          Device Max Refresh Rate: {getDeviceMaxRefreshRate()} Hz
+        </Text>
+        <Text style={styles.subtitle}>
+          Device Current Refresh Rate: {getDeviceCurrentRefreshRate()} Hz
+        </Text>
+      </View>
 
       <View>
         <Text style={styles.subtitle}>JS Thread updated values</Text>

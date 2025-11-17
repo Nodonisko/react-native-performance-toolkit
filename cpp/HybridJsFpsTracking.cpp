@@ -52,7 +52,8 @@ private:
 
     auto self = shared_from_this();
     // Get frame interval dynamically based on device refresh rate
-    const double frameIntervalMs = RuntimeBridgeState::get().getFrameIntervalMs();
+    // const double frameIntervalMs = RuntimeBridgeState::get().getFrameIntervalMs();
+    const double frameIntervalMs = 16.666666666666668; // For now fix it to 60 FPS
     const auto frameInterval = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
       std::chrono::duration<double, std::milli>(frameIntervalMs)
     );
@@ -127,7 +128,8 @@ private:
           fps = 0.0;
         }
 
-        double deviceMaxFps = RuntimeBridgeState::get().getDeviceRefreshRate();
+        // double deviceMaxFps = RuntimeBridgeState::get().getDeviceRefreshRate();
+        const double deviceMaxFps = 60.0; // For now fix it to 60 FPS
         double cappedFps = std::min(std::round(fps), deviceMaxFps);
 
         // Write to native buffer as Int32 (not on JS thread)

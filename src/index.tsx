@@ -2,6 +2,7 @@ import './specs/TurboPerformanceToolkit'
 
 import React from 'react'
 import { UIThreadReanimatedCounter } from './components/UIThreadReanimatedCounter'
+import { PerformanceToolkit } from './hybrids'
 
 export {
   BoxedJsFpsTracking,
@@ -24,5 +25,11 @@ export const CpuUsageCounter = () => {
 export const MemoryUsageCounter = () => {
   return <UIThreadReanimatedCounter label="RAM" type="memory" />
 }
+
+export const getDeviceMaxRefreshRate = () =>
+  PerformanceToolkit.getDeviceMaxRefreshRate()
+
+export const getDeviceCurrentRefreshRate = () =>
+  PerformanceToolkit.getDeviceCurrentRefreshRate()
 
 export * from './hooks/jsThreadHooks'

@@ -5,4 +5,6 @@ export interface PerformanceToolkit
   getUiFpsBuffer(): ArrayBuffer
   getCpuUsageBuffer(): ArrayBuffer
   getMemoryUsageBuffer(): ArrayBuffer
+  getDeviceMaxRefreshRate(): number
+  getDeviceCurrentRefreshRate(): number
 }

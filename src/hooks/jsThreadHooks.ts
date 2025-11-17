@@ -8,6 +8,16 @@ const getUiFpsBuffer = () => PerformanceToolkit.getUiFpsBuffer()
 const getCpuUsageBuffer = () => PerformanceToolkit.getCpuUsageBuffer()
 const getMemoryUsageBuffer = () => PerformanceToolkit.getMemoryUsageBuffer()
 
+const getValueFromBuffer = (buffer: ArrayBuffer) => {
+  const view = new DataView(buffer)
+  return view.getInt32(0, true) // true = littleEndian
+}
+
+export const getJsFps = () => getValueFromBuffer(getJsFpsBuffer())
+export const getUiFps = () => getValueFromBuffer(getUiFpsBuffer())
+export const getCpuUsage = () => getValueFromBuffer(getCpuUsageBuffer())
+export const getMemoryUsage = () => getValueFromBuffer(getMemoryUsageBuffer())
+
 const prepareOnChange = (
   bufferGetter: () => ArrayBuffer,
   intervalMs: number = 1000
@@ -19,8 +29,7 @@ const prepareOnChange = (
         console.error(`Failed to get buffer.`)
         return
       }
-      const view = new DataView(buffer)
-      callback(view.getInt32(0, true)) // true = littleEndian
+      callback(getValueFromBuffer(buffer))
     }, intervalMs)
 
     return () => {

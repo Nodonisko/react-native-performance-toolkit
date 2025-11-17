@@ -39,36 +39,13 @@ class PerformanceToolkitTurboModule(reactContext: ReactApplicationContext) :
       ?: throw IllegalStateException("PerformanceToolkit: React Native runtime executor is not available. Please ensure New Architecture is enabled.")
 
     runtimeExecutor = executor
-    val deviceFps = getDeviceRefreshRate(reactContext)
+    val deviceFps = DeviceUtils.getDeviceMaxRefreshRate(reactContext)
     
     try {
       hybridData = initHybrid(runtimeExecutor, deviceFps)
     } catch (e: Exception) {
       Log.e(TAG, "Error initializing PerformanceToolkitTurboModule", e)
       throw e
-    }
-  }
-  
-  private fun getDeviceRefreshRate(context: ReactApplicationContext): Double {
-    return try {
-      // Try to get display from current activity first
-      val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        context.currentActivity?.display
-      } else {
-        null
-      }
-      
-      // Fall back to WindowManager's default display
-      val finalDisplay = display ?: run {
-        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
-        @Suppress("DEPRECATION")
-        windowManager?.defaultDisplay
-      }
-      
-      finalDisplay?.refreshRate?.toDouble() ?: 60.0
-    } catch (e: Exception) {
-      Log.e(TAG, "Error getting device refresh rate, defaulting to 60", e)
-      60.0
     }
   }
 

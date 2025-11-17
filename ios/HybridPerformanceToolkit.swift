@@ -292,4 +292,24 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
         
         return Double(info.phys_footprint) / 1_048_576.0
     }
+    
+    func getDeviceMaxRefreshRate() throws -> Double {
+        return maxDeviceFps
+    }
+    
+    func getDeviceCurrentRefreshRate() throws -> Double {
+        // On iOS, the current refresh rate is the same as max for most cases
+        // ProMotion devices (120Hz) may throttle down, but CADisplayLink will reflect this
+        if let displayLink = displayLink {
+            // preferredFramesPerSecond returns the actual frame rate being used
+            // 0 means maximum available, so we return maxDeviceFps
+            if displayLink.preferredFramesPerSecond == 0 {
+                return maxDeviceFps
+            }
+            return Double(displayLink.preferredFramesPerSecond)
+        }
+        
+        // Fallback to current screen refresh rate
+        return Double(UIScreen.main.maximumFramesPerSecond)
+    }
 }

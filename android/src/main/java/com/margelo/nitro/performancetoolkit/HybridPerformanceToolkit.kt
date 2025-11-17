@@ -234,4 +234,24 @@ class HybridPerformanceToolkit : HybridPerformanceToolkitSpec() {
       0
     }
   }
+
+  override fun getDeviceMaxRefreshRate(): Double {
+    val context = NitroModules.applicationContext as? ReactApplicationContext
+    return if (context != null) {
+      com.performancetoolkit.DeviceUtils.getDeviceMaxRefreshRate(context)
+    } else {
+      android.util.Log.w("PerformanceToolkit", "ReactApplicationContext not available, returning default 60 Hz")
+      60.0
+    }
+  }
+  
+  override fun getDeviceCurrentRefreshRate(): Double {
+    val context = NitroModules.applicationContext as? ReactApplicationContext
+    return if (context != null) {
+      com.performancetoolkit.DeviceUtils.getDeviceCurrentRefreshRate(context)
+    } else {
+      android.util.Log.w("PerformanceToolkit", "ReactApplicationContext not available, returning default 60 Hz")
+      60.0
+    }
+  }
 }
