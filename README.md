@@ -58,7 +58,7 @@ unsubscribe()
 
 #### React Hooks - JS Thread only
 
-Please be aware that this hook will not update if your JS thread is blocked (0 FPS) because updates are happening only that very same thread.
+Please be aware that this hook will not update if your JS thread is blocked (0 FPS) because updates are happening only on that very same thread.
 
 ```tsx
 import { useFpsJs } from 'react-native-performance-toolkit'
@@ -71,21 +71,25 @@ const SomeComponent = () => {
 
 #### Reanimated Hooks - UI Thread
 
-To avoid issue with not showing 0 FPS it's recommended to use Reanimated based hooks or pre-made components. That's will ensure that value is updated even if the JS thread is blocked.
+To avoid the issue with not showing 0 FPS, it's recommended to use Reanimated based hooks or pre-made components. This will ensure the value is updated even if the JS thread is blocked.
 
 ```tsx
 import { TextInput } from 'react-native'
 import { useFpsJsSharedValue } from 'react-native-performance-toolkit'
-import Animated, { useAnimatedReaction } from 'react-native-reanimated'
+import Animated, {
+  useAnimatedReaction,
+  useAnimatedRef,
+  setNativeProps,
+} from 'react-native-reanimated'
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput)
 
 const SomeComponent = () => {
   const inputRef = useAnimatedRef<TextInput>()
-  const uiFps = useFpsJsSharedValue()
+  const jsFps = useFpsJsSharedValue()
 
   useAnimatedReaction(
-    () => uiFps.value.toString(),
+    () => jsFps.value.toString(),
     (value) => {
       setNativeProps(inputRef, { text: value })
     }
@@ -97,14 +101,27 @@ const SomeComponent = () => {
 
 #### Pre-made Reanimated components - UI Thread
 
-For better DX library provides pre-made Reanimated components that runs solely on UI thread.
+For better DX, the library provides pre-made Reanimated components that run solely on the UI thread. You can use either the convenience wrappers or the flexible base component:
 
 ```tsx
-import { UIThreadReanimatedCounter } from 'react-native-performance-toolkit'
+import {
+  JSFpsCounter,
+  UIFpsCounter,
+  CpuUsageCounter,
+  MemoryUsageCounter,
+  UIThreadReanimatedCounter,
+} from 'react-native-performance-toolkit'
 
 const SomeComponent = () => {
   return (
     <>
+      {/* Convenience components */}
+      <JSFpsCounter />
+      <UIFpsCounter />
+      <CpuUsageCounter />
+      <MemoryUsageCounter />
+
+      {/* Or use the flexible base component with custom labels */}
       <UIThreadReanimatedCounter label="JS FPS" type="js" />
       <UIThreadReanimatedCounter label="UI FPS" type="ui" />
       <UIThreadReanimatedCounter label="CPU" type="cpu" />
@@ -116,7 +133,7 @@ const SomeComponent = () => {
 
 #### Direct buffer access (advanced usage, experimental)
 
-Some advanced usage might require direct buffer access. For example you might want to use this library in custom native component or you might want to use it in worklet thread. This is experimental and might be changed in the future.
+Some advanced usage might require direct buffer access. For example, you might want to use this library in a custom native component or you might want to use it in a worklet thread. This is experimental and might be changed in the future.
 
 ```tsx
 import {
@@ -144,7 +161,7 @@ console.log('Memory Usage:', getValueFromBuffer(memoryUsageBuffer))
 
 ### Access from worklets (advanced usage)
 
-You can also access value from any worklet thread, but to do that you need use (Nitro Modules unboxing function)[https://nitro.margelo.com/docs/worklets]. For more detailed implementation look for [source code of UI Reanimated hooks like `useFpsJsSharedValue`](https://github.com/Nodonisko/react-native-performance-toolkit/blob/main/src/hooks/uiThreadHooks.ts).
+You can also access the value from any worklet thread, but to do that you need to use [Nitro Modules unboxing function](https://nitro.margelo.com/docs/worklets). For more detailed implementation look for [source code of UI Reanimated hooks like `useFpsJsSharedValue`](https://github.com/Nodonisko/react-native-performance-toolkit/blob/main/src/hooks/uiThreadHooks.ts).
 
 ```tsx
 import { useCallback } from 'react'
@@ -220,9 +237,9 @@ const updateFps = useCallback(() => {
 
 #### Low overhead tracking
 
-On Android library is reading values from virtual files like `/proc/stat` for CPU usage and `/proc/smaps_rollup` for memory usage. This is very low overhead and doesn't require any additional permissions.
+On Android, the library is reading values from virtual files like `/proc/stat` for CPU usage and `/proc/smaps_rollup` for memory usage. This is very low overhead and doesn't require any additional permissions.
 
-On iOS library is reading values from `task_vm_info`/`rusage` direct kernel call. This is also super very low overhead.
+On iOS, the library is reading values from `task_vm_info`/`rusage` direct kernel call. This is also extremely low overhead.
 
 #### Device Refresh Rate
 
@@ -235,6 +252,12 @@ The library provides two methods for getting refresh rate information:
 - **Current Refresh Rate**: Returns the currently active refresh rate
   - Android: Uses `Display.getRefreshRate()` - useful for devices with adaptive refresh rate (e.g., 60/90/120Hz switching)
   - iOS: Uses `CADisplayLink.preferredFramesPerSecond` - useful for ProMotion displays that dynamically adjust
+
+#### JS FPS Tracking
+
+You can build JS FPS tracking in plain JS using setTimeout or requestAnimationFrame. But this library is running similar logic in C++ on the same thread as JS, with lower overhead and a few other benefits. For example, we can easily access the value from other threads.
+
+For now, the FPS baseline for JS FPS is always 60 FPS as it doesn't reflect real UI updates but more like "how busy the JS thread is". I am not 100% sure if this is the correct approach and might change it in the future and I am open to suggestions.
 
 ## Contributing
 
