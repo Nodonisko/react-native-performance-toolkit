@@ -39,7 +39,8 @@
     "app.plugin.js",
     "*.podspec",
     "README.md",
-    "!example"
+    "!example",
+    "!media"
   ],
   "workspaces": [
     "example"
