@@ -31,19 +31,12 @@ import {
   getDeviceCurrentRefreshRate,
 } from 'react-native-performance-toolkit'
 
-const jsFps = getJsFps()
-const uiFps = getUiFps()
-const cpuUsage = getCpuUsage()
-const memoryUsage = getMemoryUsage()
-const maxRefreshRate = getDeviceMaxRefreshRate()
-const currentRefreshRate = getDeviceCurrentRefreshRate()
-
-console.log('JS FPS:', jsFps)
-console.log('UI FPS:', uiFps)
-console.log('CPU Usage:', cpuUsage)
-console.log('Memory Usage:', memoryUsage)
-console.log('Max Refresh Rate:', maxRefreshRate, 'Hz')
-console.log('Current Refresh Rate:', currentRefreshRate, 'Hz')
+console.log('JS FPS:', getJsFps())
+console.log('UI FPS:', getUiFps())
+console.log('CPU Usage:', getCpuUsage())
+console.log('Memory Usage:', getMemoryUsage())
+console.log('Max Refresh Rate:', getDeviceMaxRefreshRate(), 'Hz')
+console.log('Current Refresh Rate:', getDeviceCurrentRefreshRate(), 'Hz')
 ```
 
 ### Subscribe to changes
