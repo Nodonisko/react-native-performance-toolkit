@@ -1,10 +1,10 @@
 # React Native Performance Toolkit
 
-<table>
-<tr>
-<td width="65%" valign="top">
-
 Low overhead monitoring of important performance metrics for React Native apps like JS FPS, UI FPS, CPU usage, and memory usage.
+
+<p align="center">
+  <img src="media/app_screenshot.png" alt="Performance Toolkit Demo" width="30%" />
+</p>
 
 ## Installation
 
@@ -16,13 +16,6 @@ bun add react-native-performance-toolkit react-native-nitro-modules
 
 - React Native v0.76.0 or higher
 - Reanimated v4 or higher
-
-</td>
-<td width="35%">
-<img src="media/app_screenshot.png" alt="Performance Toolkit Demo" width="100%" />
-</td>
-</tr>
-</table>
 
 ## Usage
 
