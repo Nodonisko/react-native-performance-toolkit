@@ -1,6 +1,6 @@
 {
   "name": "react-native-performance-toolkit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "react-native-performance-toolkit is a react native package built with Nitro",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -13,7 +13,7 @@
     "release": "semantic-release",
     "build": "bun run typecheck && bob build",
     "prepublishOnly": "bun run codegen && bun run build",
-    "codegen": "nitrogen --logLevel=\"debug\" && bun run build && node post-script.js"
+    "codegen": "bun nitrogen --logLevel=\"debug\" && bun run build"
   },
   "keywords": [
     "react-native",
