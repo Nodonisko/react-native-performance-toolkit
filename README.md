@@ -12,10 +12,18 @@ Low overhead monitoring of important performance metrics for React Native apps l
 bun add react-native-performance-toolkit react-native-nitro-modules
 ```
 
+### Optional: Reanimated support
+
+If you want to use UI thread components and hooks (recommended for accurate FPS display), install the optional dependencies:
+
+```bash
+bun add react-native-reanimated react-native-worklets react-native-gesture-handler
+```
+
 ## Requirements
 
 - React Native v0.76.0 or higher
-- Reanimated v4 or higher
+- (Optional) Reanimated v4 or higher - for UI thread components and hooks
 
 ## Usage
 
@@ -67,11 +75,13 @@ const SomeComponent = () => {
 
 ### Reanimated Hooks - UI Thread
 
+> **Note:** These features require `react-native-reanimated` and `react-native-worklets` to be installed. Import from `react-native-performance-toolkit/reanimated`.
+
 To avoid the issue with not showing 0 FPS, it's recommended to use Reanimated based hooks or pre-made components. This will ensure the value is updated even if the JS thread is blocked.
 
 ```tsx
 import { TextInput } from 'react-native'
-import { useFpsJsSharedValue } from 'react-native-performance-toolkit'
+import { useFpsJsSharedValue } from 'react-native-performance-toolkit/reanimated'
 import Animated, {
   useAnimatedReaction,
   useAnimatedRef,
@@ -97,6 +107,8 @@ const SomeComponent = () => {
 
 ### Pre-made Reanimated components - UI Thread
 
+> **Note:** These features require `react-native-reanimated`, `react-native-worklets`, and `react-native-gesture-handler` to be installed. Import from `react-native-performance-toolkit/reanimated`.
+
 For better DX, the library provides pre-made Reanimated components that run solely on the UI thread. You can use either the convenience wrappers or the flexible base component:
 
 ```tsx
@@ -106,7 +118,7 @@ import {
   CpuUsageCounter,
   MemoryUsageCounter,
   UIThreadReanimatedCounter,
-} from 'react-native-performance-toolkit'
+} from 'react-native-performance-toolkit/reanimated'
 
 const SomeComponent = () => {
   return (
@@ -157,6 +169,8 @@ console.log('Memory Usage:', getValueFromBuffer(memoryUsageBuffer))
 
 ### Access from worklets (advanced usage)
 
+> **Note:** This requires `react-native-reanimated` and `react-native-worklets` to be installed.
+
 You can also access the value from any worklet thread, but to do that you need to use [Nitro Modules unboxing function](https://nitro.margelo.com/docs/worklets). For more detailed implementation look for [source code of UI Reanimated hooks like `useFpsJsSharedValue`](https://github.com/Nodonisko/react-native-performance-toolkit/blob/main/src/hooks/uiThreadHooks.ts).
 
 ```tsx
@@ -187,6 +201,8 @@ const updateFps = useCallback(() => {
 
 ## API Reference
 
+### Core API (no additional dependencies)
+
 - **Simple getters**
   - `getJsFps(): number` - Returns current JS FPS (0-60)
   - `getUiFps(): number` - Returns current UI FPS (0-30/60/90/120/...)
@@ -207,12 +223,6 @@ const updateFps = useCallback(() => {
   - `useCpuUsage(): number` - Hook that returns current CPU usage
   - `useMemoryUsage(): number` - Hook that returns current memory usage
 
-- **React Components (runs on UI Thread)**
-  - `<JSFpsCounter />` - Pre-made component displaying JS FPS
-  - `<UIFpsCounter />` - Pre-made component displaying UI FPS
-  - `<CpuUsageCounter />` - Pre-made component displaying CPU usage
-  - `<MemoryUsageCounter />` - Pre-made component displaying memory usage
-
 - **Buffer-based API**
   - `getJsFpsBuffer(): ArrayBuffer` - Returns ArrayBuffer with JS FPS data
   - `getUiFpsBuffer(): ArrayBuffer` - Returns ArrayBuffer with UI FPS data
@@ -228,6 +238,25 @@ const updateFps = useCallback(() => {
     - `getMemoryUsageBuffer(): ArrayBuffer`
     - `getDeviceMaxRefreshRate(): number`
     - `getDeviceCurrentRefreshRate(): number`
+
+### Reanimated API (requires optional dependencies)
+
+Import from `react-native-performance-toolkit/reanimated`:
+
+- **React Components (runs on UI Thread)**
+  - `<JSFpsCounter />` - Pre-made component displaying JS FPS
+  - `<UIFpsCounter />` - Pre-made component displaying UI FPS
+  - `<CpuUsageCounter />` - Pre-made component displaying CPU usage
+  - `<MemoryUsageCounter />` - Pre-made component displaying memory usage
+  - `<UIThreadReanimatedCounter label="..." type="js|ui|cpu|memory" />` - Flexible base component
+  - `<DraggableView>` - Draggable wrapper component
+
+- **Reanimated Hooks (UI Thread)**
+  - `useFpsJsSharedValue()` - Returns SharedValue with JS FPS
+  - `useFpsUiSharedValue()` - Returns SharedValue with UI FPS
+  - `useFpsCpuSharedValue()` - Returns SharedValue with CPU usage
+  - `useFpsMemorySharedValue()` - Returns SharedValue with memory usage
+  - `useCounterSharedValue(type)` - Generic hook for any counter type
 
 ## Architecture
 
