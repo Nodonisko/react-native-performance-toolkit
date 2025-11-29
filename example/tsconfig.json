@@ -6,7 +6,8 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "react-native-performance-toolkit": ["../src"]
+      "react-native-performance-toolkit": ["../src"],
+      "react-native-performance-toolkit/reanimated": ["../src/reanimated"]
     }
   }
 }

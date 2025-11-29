@@ -14,7 +14,7 @@ import {
   UIFpsCounter,
   CpuUsageCounter,
   MemoryUsageCounter,
-} from 'react-native-performance-toolkit';
+} from 'react-native-performance-toolkit/reanimated';
 
 function formatValue(value: number): string {
   return Number.isFinite(value) ? value.toFixed(0) : '0';

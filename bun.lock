@@ -21,8 +21,16 @@
       "peerDependencies": {
         "react": "*",
         "react-native": "*",
+        "react-native-gesture-handler": "*",
         "react-native-nitro-modules": "*",
+        "react-native-reanimated": "*",
+        "react-native-worklets": "*",
       },
+      "optionalPeers": [
+        "react-native-gesture-handler",
+        "react-native-reanimated",
+        "react-native-worklets",
+      ],
     },
     "example": {
       "name": "react-native-performance-toolkit-example",

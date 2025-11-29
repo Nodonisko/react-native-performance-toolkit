@@ -38,6 +38,8 @@
     "ios/**/*.swift",
     "app.plugin.js",
     "*.podspec",
+    "reanimated.js",
+    "reanimated.d.ts",
     "README.md",
     "!example",
     "!media"
@@ -78,6 +80,17 @@
     "react-native-reanimated": "*",
     "react-native-worklets": "*",
     "react-native-gesture-handler": "*"
+  },
+  "peerDependenciesMeta": {
+    "react-native-reanimated": {
+      "optional": true
+    },
+    "react-native-worklets": {
+      "optional": true
+    },
+    "react-native-gesture-handler": {
+      "optional": true
+    }
   },
   "eslintConfig": {
     "root": true,
