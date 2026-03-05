@@ -1,0 +1,25 @@
+diff --git a/node_modules/react-native-reanimated/android/build.gradle b/node_modules/react-native-reanimated/android/build.gradle
+index 86bace7..61dcb2a 100644
+--- a/node_modules/react-native-reanimated/android/build.gradle
++++ b/node_modules/react-native-reanimated/android/build.gradle
+@@ -350,7 +350,18 @@ if (project != rootProject) {
+     evaluationDependsOn(":react-native-worklets")
+ 
+     afterEvaluate {
+-        tasks.getByName("externalNativeBuildDebug").dependsOn(findProject(":react-native-worklets").tasks.getByName("externalNativeBuildDebug"))
+-        tasks.getByName("externalNativeBuildRelease").dependsOn(findProject(":react-native-worklets").tasks.getByName("externalNativeBuildRelease"))
++        def workletsProject = findProject(":react-native-worklets")
++        if (workletsProject != null) {
++            def workletsDebug = workletsProject.tasks.findByName("externalNativeBuildDebug")
++            def reanimatedDebug = tasks.findByName("externalNativeBuildDebug")
++            if (workletsDebug != null && reanimatedDebug != null) {
++                reanimatedDebug.dependsOn(workletsDebug)
++            }
++            def workletsRelease = workletsProject.tasks.findByName("externalNativeBuildRelease")
++            def reanimatedRelease = tasks.findByName("externalNativeBuildRelease")
++            if (workletsRelease != null && reanimatedRelease != null) {
++                reanimatedRelease.dependsOn(workletsRelease)
++            }
++        }
+     }
+ }
