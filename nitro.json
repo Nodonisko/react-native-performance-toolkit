@@ -10,11 +10,20 @@
   },
   "autolinking": {
     "PerformanceToolkit": {
-      "swift": "HybridPerformanceToolkit",
-      "kotlin": "HybridPerformanceToolkit"
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridPerformanceToolkit"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridPerformanceToolkit"
+      }
     },
     "JsFpsTracking": {
-      "cpp": "HybridJsFpsTracking"
+      "all": {
+        "language": "c++",
+        "implementationClassName": "HybridJsFpsTracking"
+      }
     }
   },
   "ignorePaths": ["**/node_modules"]
