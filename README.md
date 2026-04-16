@@ -207,7 +207,7 @@ const updateFps = useCallback(() => {
   - `getJsFps(): number` - Returns current JS FPS (0-60)
   - `getUiFps(): number` - Returns current UI FPS (0-30/60/90/120/...)
   - `getCpuUsage(): number` - Returns CPU usage percentage in Linux format
-  - `getMemoryUsage(): number` - Returns memory usage in bytes
+  - `getMemoryUsage(): number` - Returns memory usage in megabytes (MB)
   - `getDeviceMaxRefreshRate(): number` - Returns device's maximum supported refresh rate (e.g., 120 Hz on ProMotion devices)
   - `getDeviceCurrentRefreshRate(): number` - Returns device's current active refresh rate (may be lower than max on adaptive refresh rate displays)
 

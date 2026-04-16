@@ -228,7 +228,7 @@ class HybridPerformanceToolkit : HybridPerformanceToolkitSpec() {
       android.util.Log.i("PerformanceToolkit", "smaps_rollup not available, using Debug.MemoryInfo fallback")
       val memoryInfo = Debug.MemoryInfo()
       Debug.getMemoryInfo(memoryInfo)
-      (memoryInfo.totalPss / 1000.0).toInt()
+      (memoryInfo.totalPss / 1024.0).toInt()
     } catch (e: Throwable) {
       android.util.Log.e("PerformanceToolkit", "Error collecting RAM usage", e)
       0
