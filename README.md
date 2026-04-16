@@ -47,6 +47,8 @@ console.log('Max Refresh Rate:', getDeviceMaxRefreshRate(), 'Hz')
 console.log('Current Refresh Rate:', getDeviceCurrentRefreshRate(), 'Hz')
 ```
 
+> **Note:** The first call to `getCpuUsage()` always returns `0`. CPU usage is a rate — it requires two samples over time to compute — so there is no meaningful value to return until the second sampling interval (~500ms after first access). Subsequent calls return real values. If you only need a single reading, call the function once to start tracking and read it again after a short delay, or use the subscription / hook APIs which deliver values as they become available.
+
 ### Subscribe to changes
 
 ```tsx
@@ -206,8 +208,8 @@ const updateFps = useCallback(() => {
 - **Simple getters**
   - `getJsFps(): number` - Returns current JS FPS (0-60)
   - `getUiFps(): number` - Returns current UI FPS (0-30/60/90/120/...)
-  - `getCpuUsage(): number` - Returns CPU usage percentage in Linux format
-  - `getMemoryUsage(): number` - Returns memory usage in megabytes (MB)
+  - `getCpuUsage(): number` - Returns CPU usage percentage in Linux format. Returns `0` on the first call (CPU usage is a rate and requires a previous sample to compute a delta); subsequent calls return real values.
+  - `getMemoryUsage(): number` - Returns memory usage in megabytes (MB).
   - `getDeviceMaxRefreshRate(): number` - Returns device's maximum supported refresh rate (e.g., 120 Hz on ProMotion devices)
   - `getDeviceCurrentRefreshRate(): number` - Returns device's current active refresh rate (may be lower than max on adaptive refresh rate displays)
 

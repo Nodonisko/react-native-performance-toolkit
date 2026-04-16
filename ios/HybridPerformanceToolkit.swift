@@ -234,7 +234,11 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     func getMemoryUsageBuffer() throws -> ArrayBuffer {
         if memoryBuffer == nil {
             memoryBuffer = ArrayBuffer.allocate(size: MemoryLayout<Int32>.size)
-            memoryBuffer!.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = 0 }
+            // Populate synchronously so the very first read returns a real value rather than 0.
+            // Memory is an instantaneous measurement (no delta required), so this is safe to do
+            // on the calling thread; it matches the work the periodic updater does every 500ms.
+            let initialRam = Int32(collectUsedRam())
+            memoryBuffer!.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = initialRam }
         }
         
         if memoryTimer == nil && !isMemoryTrackingStarting {

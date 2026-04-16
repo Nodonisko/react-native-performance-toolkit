@@ -165,7 +165,10 @@ class HybridPerformanceToolkit : HybridPerformanceToolkitSpec() {
     if (memoryBuffer == null) {
       memoryBuffer = ArrayBuffer.allocate(4)
       val buffer = memoryBuffer!!.getBuffer(copyIfNeeded = false)
-      buffer.putInt(0, 0)
+      // Populate synchronously so the very first read returns a real value rather than 0.
+      // Memory is an instantaneous measurement (no delta required), so this is safe to do
+      // on the calling thread; it matches the work the periodic updater does every 500ms.
+      buffer.putInt(0, collectUsedRam())
     }
 
     if (memoryRunnable == null) {
