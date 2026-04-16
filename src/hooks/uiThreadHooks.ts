@@ -6,6 +6,8 @@ import { BoxedJsFpsTracking, BoxedPerformanceToolkit } from '../hybrids'
 
 export type CounterType = 'js' | 'ui' | 'cpu' | 'memory'
 
+const FPS_UPDATE_INTERVAL = 1000
+
 export const useCounterSharedValue = (type: CounterType) => {
   const fpsValue = useSharedValue(0)
   const internvalId = useSharedValue<ReturnType<typeof setInterval> | null>(
@@ -32,13 +34,17 @@ export const useCounterSharedValue = (type: CounterType) => {
       console.error(`Failed to get buffer for type: ${type}`)
       return
     }
+    const previousValue = fpsValue.get()
     const view = new DataView(buffer)
-    fpsValue.value = view.getInt32(0, true)
+    const newValue = view.getInt32(0, true)
+    if (newValue !== previousValue) {
+      fpsValue.set(newValue)
+    }
   }, [type])
 
   const startUpdateFpsLoop = useCallback(() => {
     'worklet'
-    internvalId.value = setInterval(updateFps, 1000)
+    internvalId.value = setInterval(updateFps, FPS_UPDATE_INTERVAL)
   }, [updateFps])
 
   const stopUpdateFpsLoop = useCallback(() => {
