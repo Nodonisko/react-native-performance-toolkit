@@ -1,41 +1,44 @@
 #include "HybridJsFpsTracking.hpp"
-#include "RuntimeBridge.hpp"
 
-#include <chrono>
-#include <vector>
+#include <NitroModules/Dispatcher.hpp>
+
 #include <algorithm>
-#include <thread>
 #include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <memory>
 #include <mutex>
-#include <iterator>
+#include <thread>
+#include <utility>
 
 using namespace facebook;
-using namespace facebook::react;
 
 namespace margelo::nitro::performancetoolkit {
 
-constexpr static double FPS_WINDOW_MS = 1000.0; // Sliding window for FPS calculation (1 second)
-constexpr static double BUFFER_UPDATE_INTERVAL_MS = FPS_WINDOW_MS; // Must be same as FPS_WINDOW_MS otherwise the FPS calculation will be incorrect
+namespace {
+
+constexpr double FPS_WINDOW_MS = 1000.0; // Sliding window for FPS calculation (1 second)
+constexpr double BUFFER_UPDATE_INTERVAL_MS = FPS_WINDOW_MS; // Must be same as FPS_WINDOW_MS otherwise the FPS calculation will be incorrect
+
+} // namespace
 
 class JsFpsTracker : public std::enable_shared_from_this<JsFpsTracker> {
 public:
-  explicit JsFpsTracker(
-      std::function<void(int32_t)> writer,
-      RuntimeExecutor executor)
+  JsFpsTracker(std::function<void(int32_t)> writer,
+               std::weak_ptr<Dispatcher> dispatcher)
       : _writer(std::move(writer)),
-        _executor(std::move(executor)),
+        _dispatcher(std::move(dispatcher)),
         _framesInWindow(0),
         _lastJsTickNs(0),
         _running(true),
         _taskPending(false) {}
 
+  ~JsFpsTracker() { stop(); }
+
   void start() {
     startFramePacingLoop(); // High-frequency frame counting
     startReportingLoop(); // Low-frequency FPS reporting
-  }
-
-  ~JsFpsTracker() {
-    stop();
   }
 
   void stop() {
@@ -55,8 +58,7 @@ private:
     // const double frameIntervalMs = RuntimeBridgeState::get().getFrameIntervalMs();
     const double frameIntervalMs = 16.666666666666668; // For now fix it to 60 FPS
     const auto frameInterval = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-      std::chrono::duration<double, std::milli>(frameIntervalMs)
-    );
+        std::chrono::duration<double, std::milli>(frameIntervalMs));
 
     _framePacingThread = std::thread([self, frameInterval]() {
       auto nextWake = std::chrono::steady_clock::now();
@@ -93,13 +95,12 @@ private:
     auto self = shared_from_this();
     // Reporting thread wakes up only at BUFFER_UPDATE_INTERVAL_MS (1 second)
     const auto reportInterval = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-      std::chrono::duration<double, std::milli>(BUFFER_UPDATE_INTERVAL_MS)
-    );
+        std::chrono::duration<double, std::milli>(BUFFER_UPDATE_INTERVAL_MS));
 
     _reportingThread = std::thread([self, reportInterval]() {
       // Initialize lastReportTime
       auto lastReportTime = std::chrono::steady_clock::now();
-      
+
       while (self->_running.load()) {
         // Sleep for the full report interval (1 second)
         std::this_thread::sleep_for(reportInterval);
@@ -112,17 +113,19 @@ private:
         const auto now = std::chrono::steady_clock::now();
         const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastReportTime);
         const double windowMs = static_cast<double>(elapsed.count());
-        
+
         // Read and reset frame counter
         const uint32_t frames = self->_framesInWindow.exchange(0);
 
         // Detect JS stall based on last tick timestamp
         const long long lastTickNs = self->_lastJsTickNs.load();
         const auto nowNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-        bool jsStalled = (lastTickNs == 0) || ((nowNs - lastTickNs) >= static_cast<long long>(FPS_WINDOW_MS * 1'000'000.0));
+        const bool jsStalled =
+            (lastTickNs == 0) ||
+            ((nowNs - lastTickNs) >= static_cast<long long>(FPS_WINDOW_MS * 1'000'000.0));
 
         double fps = 0.0;
-        if (frames > 0 && windowMs > 0) {
+        if (frames > 0 && windowMs > 0.0) {
           fps = (frames * 1000.0) / windowMs;
         } else if (jsStalled) {
           fps = 0.0;
@@ -130,13 +133,13 @@ private:
 
         // double deviceMaxFps = RuntimeBridgeState::get().getDeviceRefreshRate();
         const double deviceMaxFps = 60.0; // For now fix it to 60 FPS
-        double cappedFps = std::min(std::round(fps), deviceMaxFps);
+        const double cappedFps = std::min(std::round(fps), deviceMaxFps);
 
         // Write to native buffer as Int32 (not on JS thread)
         if (self->_writer) {
           self->_writer(static_cast<int32_t>(cappedFps));
         }
-        
+
         // Update lastReportTime for next iteration
         lastReportTime = now;
       }
@@ -158,24 +161,33 @@ private:
     if (!_running.load()) {
       return;
     }
-    
+
     // Check if there's already a task pending to avoid queue buildup
     bool expected = false;
     if (!_taskPending.compare_exchange_strong(expected, true)) {
       return;
     }
-    
+
+    auto dispatcher = _dispatcher.lock();
+    if (!dispatcher) {
+      // JS runtime is gone (teardown / reload in flight). Reset the gate and
+      // try again next frame; a reload will re-install a fresh dispatcher.
+      _taskPending = false;
+      return;
+    }
+
     // Capture shared_ptr to keep tracker alive
     auto self = shared_from_this();
-    _executor([self](jsi::Runtime&) {
+    dispatcher->runAsync([self]() {
       if (!self->_running.load()) {
         self->_taskPending = false;
         return;
       }
-      
+
       // Record a JS tick and increment frame counter only
-      const auto now = std::chrono::steady_clock::now();
-      const auto nowNs = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+      const auto nowNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             std::chrono::steady_clock::now().time_since_epoch())
+                             .count();
       self->_lastJsTickNs.store(nowNs);
       self->_framesInWindow.fetch_add(1);
       self->_taskPending = false;
@@ -183,7 +195,7 @@ private:
   }
 
   std::function<void(int32_t)> _writer;
-  RuntimeExecutor _executor;
+  std::weak_ptr<Dispatcher> _dispatcher;
   std::atomic<uint32_t> _framesInWindow;
   std::atomic<long long> _lastJsTickNs;
   std::atomic<bool> _running;
@@ -201,36 +213,69 @@ HybridJsFpsTracking::~HybridJsFpsTracking() {
   }
 }
 
-std::shared_ptr<ArrayBuffer> HybridJsFpsTracking::getJsFpsBuffer() {
-  // Allocate buffer if needed (owning, 4 bytes for one Int32 FPS value)
+void HybridJsFpsTracking::loadHybridMethods() {
+  HybridJsFpsTrackingSpec::loadHybridMethods();
+  registerHybrids(this, [](Prototype& prototype) {
+    prototype.registerRawHybridMethod(
+        "__installJsDispatcher", 0,
+        &HybridJsFpsTracking::installJsDispatcher);
+  });
+}
+
+jsi::Value HybridJsFpsTracking::installJsDispatcher(jsi::Runtime& runtime,
+                                                    const jsi::Value& /* thisValue */,
+                                                    const jsi::Value* /* args */,
+                                                    size_t /* count */) {
+  // The dispatcher is keyed by `jsi::Runtime`, so re-calling this from a fresh
+  // JS runtime (e.g. after a full reload) transparently replaces the stale one.
+  auto dispatcher = Dispatcher::getRuntimeGlobalDispatcher(runtime);
+  {
+    std::lock_guard<std::mutex> lock(_startMutex);
+    _jsDispatcher = std::move(dispatcher);
+  }
+  tryStart();
+  return jsi::Value::undefined();
+}
+
+void HybridJsFpsTracking::tryStart() {
+  std::lock_guard<std::mutex> lock(_startMutex);
+
   if (_fpsBuffer == nullptr) {
-    _fpsBuffer = ArrayBuffer::allocate(sizeof(int32_t));
-    auto* bytes = _fpsBuffer->data();
-    auto* ptr = reinterpret_cast<int32_t*>(bytes);
-    *ptr = 0;
+    return;
+  }
+  if (_jsDispatcher.expired()) {
+    return;
+  }
+  if (_tracker != nullptr) {
+    return;
   }
 
-  // Ensure a tracker is running so the buffer gets updated; if runtime not ready, just return buffer with 0s
-  if (_tracker == nullptr) {
-    try {
-      RuntimeExecutor executor = RuntimeBridgeState::get().getRuntimeExecutor();
-      // Writer to update the buffer
-      auto writer = [this](int32_t fpsInt) {
-        if (this->_fpsBuffer) {
-          auto* bytes = this->_fpsBuffer->data();
-          auto* ptr = reinterpret_cast<int32_t*>(bytes);
-          *ptr = fpsInt;
-        }
-      };
-      _tracker = std::make_shared<JsFpsTracker>(writer, executor);
-      _tracker->start();
-    } catch (const std::runtime_error&) {
-      printf("RuntimeExecutor not ready yet; return buffer initialized to 0 and try again on next call\n");
+  auto bufferWeak = std::weak_ptr<ArrayBuffer>(_fpsBuffer);
+  auto writer = [bufferWeak](int32_t fpsInt) {
+    if (auto buffer = bufferWeak.lock()) {
+      *reinterpret_cast<int32_t*>(buffer->data()) = fpsInt;
+    }
+  };
+
+  _tracker = std::make_shared<JsFpsTracker>(std::move(writer), _jsDispatcher);
+  _tracker->start();
+}
+
+std::shared_ptr<ArrayBuffer> HybridJsFpsTracking::getJsFpsBuffer() {
+  // Allocate buffer if needed (owning, 4 bytes for one Int32 FPS value)
+  {
+    std::lock_guard<std::mutex> lock(_startMutex);
+    if (_fpsBuffer == nullptr) {
+      _fpsBuffer = ArrayBuffer::allocate(sizeof(int32_t));
+      *reinterpret_cast<int32_t*>(_fpsBuffer->data()) = 0;
     }
   }
 
+  // If the dispatcher isn't installed yet (consumer forgot to import
+  // `hybrids.ts` on the JS thread), the tracker starts as soon as it is — and
+  // until then the buffer stays initialized to 0.
+  tryStart();
   return _fpsBuffer;
 }
 
 } // namespace margelo::nitro::performancetoolkit
-

@@ -31,7 +31,6 @@ PODS:
     - NitroModules
     - RCTRequired
     - RCTTypeSafety
-    - React-callinvoker
     - React-Core
     - React-Core-prebuilt
     - React-debug
@@ -2342,7 +2341,7 @@ SPEC CHECKSUMS:
   FBLazyVector: e97c19a5a442429d1988f182a1940fb08df514da
   hermes-engine: d3127a55136b3f333da9a3528e03e509cd1d0276
   NitroModules: f45159491c5a0e7161685a301b1c6c11440b3ab1
-  PerformanceToolkit: 18fa88871cc71886cfe270bfda5cb102e931878b
+  PerformanceToolkit: 801b25c75ab9ffadc23af79ff8f9125d2c5fbf64
   RCTDeprecation: af44b104091a34482596cd9bd7e8d90c4e9b4bd7
   RCTRequired: bb77b070f75f53398ce43c0aaaa58337cebe2bf6
   RCTSwiftUI: afc0a0a635860da1040a0b894bfd529da06d7810

@@ -1,5 +1,3 @@
-const path = require('path')
-
 const pkg = require('./package.json')
 
 /**
@@ -16,5 +14,4 @@ module.exports = {
       root: __dirname,
     },
   },
-  codegenConfig: pkg.codegenConfig,
 }

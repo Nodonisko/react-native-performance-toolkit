@@ -16,8 +16,6 @@ Pod::Spec.new do |s|
   s.source_files = [
     # Implementation (Swift)
     "ios/**/*.{swift}",
-    # Autolinking/Registration (Objective-C++)
-    "ios/**/*.{h,m,mm}",
     # Implementation (C++ objects)
     "cpp/**/*.{hpp,cpp,h}",
   ]
@@ -26,6 +24,5 @@ Pod::Spec.new do |s|
   add_nitrogen_files(s)
 
   s.dependency 'React-jsi'
-  s.dependency 'React-callinvoker'
   install_modules_dependencies(s)
 end

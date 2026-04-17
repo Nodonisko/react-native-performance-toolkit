@@ -1,5 +1,3 @@
-import './specs/TurboPerformanceToolkit'
-
 import { PerformanceToolkit } from './hybrids'
 
 export {
