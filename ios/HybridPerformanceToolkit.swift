@@ -46,8 +46,21 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
     private static let CPU_COLLECTION_INTERVAL: CFTimeInterval = 0.5
     
     // Memory tracking
+    // Shared backing buffer for getMemoryUsage() and getExtendedMemoryUsage().
+    // The basic API reads only offset 0; collecting extended fields adds no
+    // additional task_info call.
+    // Buffer layout (little-endian):
+    //   offset  0 : Int32   phys_footprint (MB)  -- primary, jetsam-relevant
+    //   offset  8 : Float64 resident_size  (KB)  -- resident secondary
+    //   offset 16 : Float64 region_count   (count) -- address-space diagnostic
+    // virtual_size is intentionally not collected (reserved address space is
+    // not a useful memory-usage signal).
+    private static let MEMORY_BUFFER_SIZE = 24
+    private static let MEMORY_PHYS_FOOTPRINT_MB_OFFSET = 0
+    private static let MEMORY_RESIDENT_SIZE_KB_OFFSET = 8
+    private static let MEMORY_REGION_COUNT_OFFSET = 16
     private var memoryTimer: Timer?
-    private var memoryBuffer: ArrayBuffer?
+    private var memoryMetricsBuffer: ArrayBuffer?
     private var isMemoryTrackingStarting = false
     
     private lazy var maxDeviceFps: Double = {
@@ -229,16 +242,16 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
         return cpuPercentage
     }
     
-    // MARK: - Memory Usage Buffer
+    // MARK: - Memory Metrics Buffer
     
     func getMemoryUsageBuffer() throws -> ArrayBuffer {
-        if memoryBuffer == nil {
-            memoryBuffer = ArrayBuffer.allocate(size: MemoryLayout<Int32>.size)
-            // Populate synchronously so the very first read returns a real value rather than 0.
+        if memoryMetricsBuffer == nil {
+            memoryMetricsBuffer = ArrayBuffer.allocate(size: Self.MEMORY_BUFFER_SIZE)
+            memset(memoryMetricsBuffer!.data, 0, Self.MEMORY_BUFFER_SIZE)
+            // Populate synchronously so the very first read returns real values rather than 0.
             // Memory is an instantaneous measurement (no delta required), so this is safe to do
             // on the calling thread; it matches the work the periodic updater does every 500ms.
-            let initialRam = Int32(collectUsedRam())
-            memoryBuffer!.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = initialRam }
+            updateMemoryMetricsBuffer()
         }
         
         if memoryTimer == nil && !isMemoryTrackingStarting {
@@ -246,7 +259,7 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
             startMemoryTracking()
         }
         
-        return memoryBuffer!
+        return memoryMetricsBuffer!
     }
     
     private func startMemoryTracking() {
@@ -263,38 +276,94 @@ class HybridPerformanceToolkit: HybridPerformanceToolkitSpec {
             }
             
             self.memoryTimer = Timer.scheduledTimer(withTimeInterval: Self.MEMORY_UPDATE_INTERVAL, repeats: true) { [weak self] _ in
-                self?.updateMemoryBuffer()
+                self?.updateMemoryMetricsBuffer()
             }
             
             self.isMemoryTrackingStarting = false
         }
     }
     
-    private func updateMemoryBuffer() {
-        guard let buffer = memoryBuffer else { return }
-        
-        let ramValue = collectUsedRam()
-        
-        buffer.data.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee = Int32(ramValue) }
+    private struct TaskVmInfoSample {
+        let physFootprintMb: Double?
+        let residentSizeKb: Double?
+        let regionCount: Double?
     }
     
-    private func collectUsedRam() -> Double {
-        // Use task_vm_info to get phys_footprint, which matches Xcode's memory gauge
-        // This excludes shared memory (frameworks, dylibs) and shows actual app footprint
+    private func updateMemoryMetricsBuffer() {
+        guard let buffer = memoryMetricsBuffer else { return }
+        
+        let sample = collectTaskVmInfo()
+        
+        buffer.data.advanced(by: Self.MEMORY_PHYS_FOOTPRINT_MB_OFFSET)
+            .withMemoryRebound(to: Int32.self, capacity: 1) {
+                $0.pointee = Int32(sample.physFootprintMb ?? 0.0)
+            }
+        writeDouble(buffer, offset: Self.MEMORY_RESIDENT_SIZE_KB_OFFSET, value: sample.residentSizeKb ?? 0.0)
+        writeDouble(buffer, offset: Self.MEMORY_REGION_COUNT_OFFSET, value: sample.regionCount ?? 0.0)
+    }
+    
+    private func writeDouble(_ buffer: ArrayBuffer, offset: Int, value: Double) {
+        var mutableValue = value
+        withUnsafeBytes(of: &mutableValue) { bytes in
+            memcpy(buffer.data.advanced(by: offset), bytes.baseAddress!, MemoryLayout<Double>.size)
+        }
+    }
+    
+    private func taskVmInfoCountCovers<T>(_ field: KeyPath<task_vm_info_data_t, T>, count: mach_msg_type_number_t) -> Bool {
+        guard let offset = MemoryLayout<task_vm_info_data_t>.offset(of: field) else {
+            return false
+        }
+        let wordSize = MemoryLayout<natural_t>.size
+        let requiredCount = mach_msg_type_number_t((offset + MemoryLayout<T>.size + wordSize - 1) / wordSize)
+        return count >= requiredCount
+    }
+    
+    private func collectTaskVmInfo() -> TaskVmInfoSample {
+        // TASK_VM_INFO gives phys_footprint plus resident size and region count.
+        // Swift does not import the TASK_VM_INFO_COUNT macro, so compute the same
+        // natural_t word count and verify the returned revision covers each late
+        // field before reading it. virtual_size is intentionally not read: it
+        // measures reserved-but-uncommitted address space and is useless as a
+        // memory-usage signal.
         var info = task_vm_info_data_t()
-        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size) / 4
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
         
         let result = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
                 task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
             }
         }
         
         guard result == KERN_SUCCESS else {
-            return 0.0
+            return TaskVmInfoSample(physFootprintMb: nil, residentSizeKb: nil, regionCount: nil)
         }
         
-        return Double(info.phys_footprint) / 1_048_576.0
+        let physFootprintMb: Double?
+        if taskVmInfoCountCovers(\task_vm_info_data_t.phys_footprint, count: count) {
+            physFootprintMb = Double(info.phys_footprint) / 1_048_576.0
+        } else {
+            physFootprintMb = nil
+        }
+        
+        let residentSizeKb: Double?
+        if taskVmInfoCountCovers(\task_vm_info_data_t.resident_size, count: count) {
+            residentSizeKb = Double(info.resident_size) / 1024.0
+        } else {
+            residentSizeKb = nil
+        }
+        
+        let regionCount: Double?
+        if taskVmInfoCountCovers(\task_vm_info_data_t.region_count, count: count) {
+            regionCount = Double(info.region_count)
+        } else {
+            regionCount = nil
+        }
+        
+        return TaskVmInfoSample(
+            physFootprintMb: physFootprintMb,
+            residentSizeKb: residentSizeKb,
+            regionCount: regionCount
+        )
     }
     
     func getDeviceMaxRefreshRate() throws -> Double {
