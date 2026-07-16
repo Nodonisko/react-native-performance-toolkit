@@ -35,6 +35,7 @@ import {
   getUiFps,
   getCpuUsage,
   getMemoryUsage,
+  getExtendedMemoryUsage,
   getDeviceMaxRefreshRate,
   getDeviceCurrentRefreshRate,
 } from 'react-native-performance-toolkit'
@@ -43,6 +44,7 @@ console.log('JS FPS:', getJsFps())
 console.log('UI FPS:', getUiFps())
 console.log('CPU Usage:', getCpuUsage())
 console.log('Memory Usage:', getMemoryUsage())
+console.log('Extended Memory Usage:', getExtendedMemoryUsage())
 console.log('Max Refresh Rate:', getDeviceMaxRefreshRate(), 'Hz')
 console.log('Current Refresh Rate:', getDeviceCurrentRefreshRate(), 'Hz')
 ```
@@ -169,6 +171,23 @@ console.log('CPU Usage:', getValueFromBuffer(cpuUsageBuffer))
 console.log('Memory Usage:', getValueFromBuffer(memoryUsageBuffer))
 ```
 
+On iOS, `getMemoryUsageBuffer()` returns a 24-byte buffer so advanced consumers can also read resident size and VM region count without an extra native call:
+
+| Offset | Type      | Field            | Unit  |
+| ------ | --------- | ---------------- | ----- |
+|      0 | `Int32`   | `phys_footprint` | MB    |
+|      8 | `Float64` | `resident_size`  | KB    |
+|     16 | `Float64` | `region_count`   | count |
+
+Offset 0 stays compatible with `getMemoryUsage()`. Prefer `getExtendedMemoryUsage()` unless you need raw buffer access (e.g. from a worklet). Android currently keeps the 4-byte PSS buffer; extended fields read as `0`.
+
+```tsx
+import { getExtendedMemoryUsage } from 'react-native-performance-toolkit'
+
+const { memoryUsageMb, residentSizeKb, regionCount } =
+  getExtendedMemoryUsage()
+```
+
 ### Access from worklets (advanced usage)
 
 > **Note:** This requires `react-native-reanimated` and `react-native-worklets` to be installed.
@@ -210,6 +229,7 @@ const updateFps = useCallback(() => {
   - `getUiFps(): number` - Returns current UI FPS (0-30/60/90/120/...)
   - `getCpuUsage(): number` - Returns CPU usage percentage in Linux format. Returns `0` on the first call (CPU usage is a rate and requires a previous sample to compute a delta); subsequent calls return real values.
   - `getMemoryUsage(): number` - Returns memory usage in megabytes (MB).
+  - `getExtendedMemoryUsage(): { memoryUsageMb: number, residentSizeKb: number, regionCount: number }` - Returns extended memory metrics. `memoryUsageMb` is `phys_footprint` on iOS and PSS on Android. On iOS, the additional fields contain `task_vm_info` resident size (KB) and region count; on Android they are `0`.
   - `getDeviceMaxRefreshRate(): number` - Returns device's maximum supported refresh rate (e.g., 120 Hz on ProMotion devices)
   - `getDeviceCurrentRefreshRate(): number` - Returns device's current active refresh rate (may be lower than max on adaptive refresh rate displays)
 
@@ -218,18 +238,20 @@ const updateFps = useCallback(() => {
   - `onFpsUiChange(callback: (fps: number) => void): () => void` - Subscribe to UI FPS changes
   - `onCpuChange(callback: (value: number) => void): () => void` - Subscribe to CPU usage changes
   - `onMemoryChange(callback: (value: number) => void): () => void` - Subscribe to memory usage changes
+  - `onExtendedMemoryChange(callback: (value: { memoryUsageMb: number, residentSizeKb: number, regionCount: number }) => void): () => void` - Subscribe to extended memory usage changes
 
 - **React Hooks (JS Thread)**
   - `useFpsJs(): number` - Hook that returns current JS FPS
   - `useFpsUi(): number` - Hook that returns current UI FPS
   - `useCpuUsage(): number` - Hook that returns current CPU usage
   - `useMemoryUsage(): number` - Hook that returns current memory usage
+  - `useExtendedMemoryUsage(): { memoryUsageMb: number, residentSizeKb: number, regionCount: number }` - Hook that returns current extended memory usage
 
 - **Buffer-based API**
   - `getJsFpsBuffer(): ArrayBuffer` - Returns ArrayBuffer with JS FPS data
   - `getUiFpsBuffer(): ArrayBuffer` - Returns ArrayBuffer with UI FPS data
   - `getCpuUsageBuffer(): ArrayBuffer` - Returns ArrayBuffer with CPU usage data
-  - `getMemoryUsageBuffer(): ArrayBuffer` - Returns ArrayBuffer with memory usage data
+  - `getMemoryUsageBuffer(): ArrayBuffer` - Returns ArrayBuffer with memory usage data. On iOS this is 24 bytes (`phys_footprint` MB + `resident_size` KB + `region_count`); on Android it remains 4 bytes (PSS MB).
 
 - **Advanced (Nitro Modules)**
   - `BoxedJsFpsTracking` - Direct boxed Nitro module instance for worklet usage
@@ -266,7 +288,7 @@ Import from `react-native-performance-toolkit/reanimated`:
 
 On Android, the library is reading values from virtual files like `/proc/stat` for CPU usage and `/proc/smaps_rollup` for memory usage. This is very low overhead and doesn't require any additional permissions.
 
-On iOS, the library is reading values from `task_vm_info`/`rusage` direct kernel call. This is also extremely low overhead.
+On iOS, the library is reading values from `task_vm_info`/`rusage` direct kernel call. This is also extremely low overhead. The memory buffer exposes `phys_footprint` (primary), plus `resident_size` and `region_count` for deeper diagnostics.
 
 ### Device Refresh Rate
 
