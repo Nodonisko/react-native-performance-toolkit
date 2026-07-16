@@ -4,6 +4,7 @@ import {
   useFpsUi,
   useCpuUsage,
   useMemoryUsage,
+  useExtendedMemoryUsage,
   useFpsJs,
   getDeviceMaxRefreshRate,
   getDeviceCurrentRefreshRate,
@@ -41,6 +42,20 @@ const CpuUsageCounterJSThread = () => {
 const MemoryUsageCounterJSThread = () => {
   const memoryUsage = useMemoryUsage();
   return <Text style={styles.stat}>RAM (MB): {formatValue(memoryUsage)}</Text>;
+};
+
+const ExtendedMemoryCounterJSThread = () => {
+  const { memoryUsageMb, residentSizeKb, regionCount } =
+    useExtendedMemoryUsage();
+  return (
+    <>
+      <Text style={styles.stat}>Ext RAM (MB): {formatValue(memoryUsageMb)}</Text>
+      <Text style={styles.stat}>
+        Resident (KB): {formatValue(residentSizeKb)}
+      </Text>
+      <Text style={styles.stat}>Regions: {formatValue(regionCount)}</Text>
+    </>
+  );
 };
 
 function App(): React.JSX.Element {
@@ -103,6 +118,7 @@ function App(): React.JSX.Element {
         <UIFpsCounterJSThread />
         <CpuUsageCounterJSThread />
         <MemoryUsageCounterJSThread />
+        <ExtendedMemoryCounterJSThread />
       </View>
 
       <View>

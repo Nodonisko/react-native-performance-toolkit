@@ -238,12 +238,14 @@ const updateFps = useCallback(() => {
   - `onFpsUiChange(callback: (fps: number) => void): () => void` - Subscribe to UI FPS changes
   - `onCpuChange(callback: (value: number) => void): () => void` - Subscribe to CPU usage changes
   - `onMemoryChange(callback: (value: number) => void): () => void` - Subscribe to memory usage changes
+  - `onExtendedMemoryChange(callback: (value: { memoryUsageMb: number, residentSizeKb: number, regionCount: number }) => void): () => void` - Subscribe to extended memory usage changes
 
 - **React Hooks (JS Thread)**
   - `useFpsJs(): number` - Hook that returns current JS FPS
   - `useFpsUi(): number` - Hook that returns current UI FPS
   - `useCpuUsage(): number` - Hook that returns current CPU usage
   - `useMemoryUsage(): number` - Hook that returns current memory usage
+  - `useExtendedMemoryUsage(): { memoryUsageMb: number, residentSizeKb: number, regionCount: number }` - Hook that returns current extended memory usage
 
 - **Buffer-based API**
   - `getJsFpsBuffer(): ArrayBuffer` - Returns ArrayBuffer with JS FPS data

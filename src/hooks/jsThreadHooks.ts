@@ -78,6 +78,19 @@ export const onFpsUiChange = prepareOnChange(getUiFpsBuffer)
 export const onCpuChange = prepareOnChange(getCpuUsageBuffer)
 export const onMemoryChange = prepareOnChange(getMemoryUsageBuffer)
 
+export const onExtendedMemoryChange = (
+  callback: (value: ExtendedMemoryUsage) => void,
+  intervalMs: number = 1000
+) => {
+  const intervalId = setInterval(() => {
+    callback(getExtendedMemoryUsage())
+  }, intervalMs)
+
+  return () => {
+    clearInterval(intervalId)
+  }
+}
+
 export const useFpsJs = () => {
   const [value, setValue] = useState(0)
   useEffect(() => {
@@ -109,6 +122,19 @@ export const useMemoryUsage = () => {
   const [value, setValue] = useState(0)
   useEffect(() => {
     const unsubscribe = onMemoryChange(setValue)
+    return unsubscribe
+  }, [])
+  return value
+}
+
+export const useExtendedMemoryUsage = (): ExtendedMemoryUsage => {
+  const [value, setValue] = useState<ExtendedMemoryUsage>({
+    memoryUsageMb: 0,
+    residentSizeKb: 0,
+    regionCount: 0,
+  })
+  useEffect(() => {
+    const unsubscribe = onExtendedMemoryChange(setValue)
     return unsubscribe
   }, [])
   return value
