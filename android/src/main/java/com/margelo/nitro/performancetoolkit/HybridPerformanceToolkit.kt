@@ -2,6 +2,7 @@ package com.margelo.nitro.performancetoolkit
 
 import android.os.Debug
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import androidx.annotation.Keep
 import com.facebook.react.bridge.ReactApplicationContext
@@ -179,7 +180,8 @@ class HybridPerformanceToolkit : HybridPerformanceToolkitSpec() {
   }
 
   private fun startMemoryTracking() {
-    memoryHandler = Handler(Looper.getMainLooper())
+    val memoryThread = HandlerThread("PerformanceToolkitMemory").apply { start() }
+    memoryHandler = Handler(memoryThread.looper)
     memoryRunnable = Runnable {
       updateMemoryBuffer()
       memoryHandler?.postDelayed(memoryRunnable!!, MEMORY_UPDATE_INTERVAL_MS)
